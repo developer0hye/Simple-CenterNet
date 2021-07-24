@@ -123,11 +123,22 @@ class CenterNet(nn.Module):
             grid_x = torch.arange(out_w, dtype=out.dtype, device=device).view(1, 1, out_w).repeat(1, out_h, 1)
             
             # localization
-            bboxes_cx = (self.stride * (grid_x + out[:, 0]).flatten(start_dim=1))/self.img_w
-            bboxes_cy = (self.stride * (grid_y + out[:, 1]).flatten(start_dim=1))/self.img_h
             
-            bboxes_w = (self.stride * out[:, 2].flatten(start_dim=1))/self.img_w
-            bboxes_h = (self.stride * out[:, 3].flatten(start_dim=1))/self.img_h
+            bboxes_tlx = grid_x - out[:, 0]
+            bboxes_tly = grid_y - out[:, 1]
+            bboxes_brx = grid_x + out[:, 2]
+            bboxes_bry = grid_y + out[:, 3]
+             
+            bboxes_cx = (bboxes_tlx + bboxes_brx) /2.
+            bboxes_cy = (bboxes_tly + bboxes_bry) /2.
+            bboxes_w = (out[:, 0] + out[:, 2])
+            bboxes_h = (out[:, 1] + out[:, 3])
+            
+            bboxes_cx = (self.stride * bboxes_cx.flatten(start_dim=1))/self.img_w
+            bboxes_cy = (self.stride * bboxes_cy.flatten(start_dim=1))/self.img_h
+            
+            bboxes_w = (self.stride * bboxes_w.flatten(start_dim=1))/self.img_w
+            bboxes_h = (self.stride * bboxes_h.flatten(start_dim=1))/self.img_h
             
             class_heatmap = torch.sigmoid(out[:, 4:])# [B, 20, H, W]
             class_heatmap = self.nms(class_heatmap).flatten(start_dim=2).transpose(1, 2) # [B, 20, H*W] -> # [B, H*W, 20]
@@ -215,7 +226,7 @@ class CenterNet(nn.Module):
         batch_loss_h /= batch_num_positive_samples
         batch_loss_class_heatmap /= batch_num_positive_samples
 
-        batch_loss_offset_xy = torch.sum(batch_loss_offset_x + batch_loss_offset_y)/2.
+        batch_loss_offset_xy = 0.1 * torch.sum(batch_loss_offset_x + batch_loss_offset_y)/2.
         batch_loss_wh = 0.1 * torch.sum(batch_loss_w + batch_loss_h)/2.
         batch_loss_class_heatmap = torch.sum(batch_loss_class_heatmap)
         loss = batch_loss_offset_xy + batch_loss_wh + batch_loss_class_heatmap

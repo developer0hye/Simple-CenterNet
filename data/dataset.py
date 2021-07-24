@@ -107,10 +107,15 @@ class DetectionDataset(Dataset):  # for training/testing
 
             foreground[bbox_icy, bbox_icx] = 1
             
-            bboxes_regression[0, bbox_icy, bbox_icx] = bbox_fcx-bbox_icx
-            bboxes_regression[1, bbox_icy, bbox_icx] = bbox_fcy-bbox_icy
-            bboxes_regression[2, bbox_icy, bbox_icx] = bbox_w
-            bboxes_regression[3, bbox_icy, bbox_icx] = bbox_h
+            bbox_ftlx = bbox_fcx - bbox_w/2.
+            bbox_ftly = bbox_fcy - bbox_h/2.
+            bbox_fbrx = bbox_fcx + bbox_w/2.
+            bbox_fbry = bbox_fcy + bbox_h/2.
+            
+            bboxes_regression[0, bbox_icy, bbox_icx] = bbox_icx - bbox_ftlx
+            bboxes_regression[1, bbox_icy, bbox_icx] = bbox_icy - bbox_ftly
+            bboxes_regression[2, bbox_icy, bbox_icx] = bbox_fbrx - bbox_icx
+            bboxes_regression[3, bbox_icy, bbox_icx] = bbox_fbry - bbox_icy
             
             classes_gaussian_heatmap[bbox_class] = transforms.scatter_gaussian_kernel(classes_gaussian_heatmap[bbox_class], bbox_icx, bbox_icy, bbox_w.item(), bbox_h.item())
         

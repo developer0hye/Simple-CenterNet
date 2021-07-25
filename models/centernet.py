@@ -70,17 +70,11 @@ class CenterNet(nn.Module):
         
         init_prob = 0.01
         nn.init.constant_(self.cls_pred[-1].bias, -torch.log(torch.tensor((1.-init_prob)/init_prob)))
-             
-        self.txty_pred = nn.Sequential(
+
+        self.ltrb_pred = nn.Sequential(
             nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(64, 2, kernel_size=1)
-        )
-       
-        self.twth_pred = nn.Sequential(
-            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(64, 2, kernel_size=1)
+            nn.Conv2d(64, 4, kernel_size=1)
         )
         
         #for decoding
@@ -98,10 +92,9 @@ class CenterNet(nn.Module):
         x = self.upsample3(x)
         
         cls_pred = self.cls_pred(x)
-        txty_pred = self.txty_pred(x)
-        twth_pred = self.twth_pred(x)
+        ltrb_pred = self.ltrb_pred(x)
         
-        out = torch.cat([txty_pred, twth_pred, cls_pred], dim=1)
+        out = torch.cat([ltrb_pred, cls_pred], dim=1)
         return out 
     
     def forward(self, x, flip=False):

@@ -88,9 +88,8 @@ if __name__ == "__main__":
                 batch_output = model(batch_img)
                 loss, losses = model.compute_loss(batch_output, batch_label)
             
-            writer.add_scalar('train/loss_offset_xy', losses[0].item(), n_iteration)
-            writer.add_scalar('train/loss_wh', losses[1].item(), n_iteration)
-            writer.add_scalar('train/loss_class_heatmap', losses[2].item(), n_iteration)
+            writer.add_scalar('train/loss_ltrb', losses[0].item(), n_iteration)
+            writer.add_scalar('train/loss_class_heatmap', losses[1].item(), n_iteration)
             writer.add_scalar('train/loss', loss.item(), n_iteration)
             writer.add_scalar('train/lr', common.get_lr(optimizer), n_iteration)
 

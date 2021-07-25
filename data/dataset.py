@@ -99,24 +99,25 @@ class DetectionDataset(Dataset):  # for training/testing
         classes_gaussian_heatmap = np.zeros(shape=(self.num_classes, self.heatmap_h, self.heatmap_w), dtype=np.float32)
         foreground = np.zeros(shape=(self.heatmap_h, self.heatmap_w), dtype=np.float32)
         
+        bboxes_icx = label[:, 1].astype(np.int)
+        bboxes_icy = label[:, 2].astype(np.int)
+        
+        foreground[bboxes_icy, bboxes_icx] = 1
+        
+        bboxes_ftlx = label[:, 1] - label[:, 3]/2.
+        bboxes_ftly = label[:, 2] - label[:, 4]/2.
+        bboxes_fbrx = label[:, 1] + label[:, 3]/2.
+        bboxes_fbry = label[:, 2] + label[:, 4]/2.
+        
+        bboxes_regression[0, bboxes_icy, bboxes_icx] = bboxes_icx - bboxes_ftlx
+        bboxes_regression[1, bboxes_icy, bboxes_icx] = bboxes_icy - bboxes_ftly
+        bboxes_regression[2, bboxes_icy, bboxes_icx] = bboxes_fbrx - bboxes_icx
+        bboxes_regression[3, bboxes_icy, bboxes_icx] = bboxes_fbry - bboxes_icy
+
         for bbox in label:
             bbox_class = int(bbox[0])
-            
             bbox_fcx, bbox_fcy, bbox_w, bbox_h = bbox[1:]
             bbox_icx, bbox_icy = int(bbox_fcx), int(bbox_fcy)
-
-            foreground[bbox_icy, bbox_icx] = 1
-            
-            bbox_ftlx = bbox_fcx - bbox_w/2.
-            bbox_ftly = bbox_fcy - bbox_h/2.
-            bbox_fbrx = bbox_fcx + bbox_w/2.
-            bbox_fbry = bbox_fcy + bbox_h/2.
-            
-            bboxes_regression[0, bbox_icy, bbox_icx] = bbox_icx - bbox_ftlx
-            bboxes_regression[1, bbox_icy, bbox_icx] = bbox_icy - bbox_ftly
-            bboxes_regression[2, bbox_icy, bbox_icx] = bbox_fbrx - bbox_icx
-            bboxes_regression[3, bbox_icy, bbox_icx] = bbox_fbry - bbox_icy
-            
             classes_gaussian_heatmap[bbox_class] = transforms.scatter_gaussian_kernel(classes_gaussian_heatmap[bbox_class], bbox_icx, bbox_icy, bbox_w.item(), bbox_h.item())
         
         annotations = torch.tensor(annotations)

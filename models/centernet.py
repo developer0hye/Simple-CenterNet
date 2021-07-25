@@ -184,46 +184,31 @@ class CenterNet(nn.Module):
         dtype = batch_pred.dtype
         device = batch_pred.device
         
-        loss_offset_xy_function = nn.L1Loss(reduction='none')
-        loss_wh_function = nn.L1Loss(reduction='none')
+        loss_ltrb_function = nn.L1Loss(reduction='none')
 
         batch_label["bboxes_regression"] = batch_label["bboxes_regression"].to(device)
         batch_label["classes_gaussian_heatmap"] = batch_label["classes_gaussian_heatmap"].to(device)
         batch_label["foreground"] = batch_label["foreground"].to(device)
         
-        batch_loss_offset_x = torch.tensor(0., dtype=dtype, device=device)
-        batch_loss_offset_y = torch.tensor(0., dtype=dtype, device=device)
-        batch_loss_w = torch.tensor(0., dtype=dtype, device=device)
-        batch_loss_h = torch.tensor(0., dtype=dtype, device=device)
+        batch_loss_ltrb = torch.tensor(0., dtype=dtype, device=device)
         batch_loss_class_heatmap = torch.tensor(0., dtype=dtype, device=device)
-        
-        batch_loss_offset_x = loss_offset_xy_function(batch_pred[:, 0], batch_label["bboxes_regression"][:, 0]) * batch_label["foreground"]/batch_size
-        batch_loss_offset_y = loss_offset_xy_function(batch_pred[:, 1], batch_label["bboxes_regression"][:, 1]) * batch_label["foreground"]/batch_size
-        batch_loss_w = loss_wh_function(batch_pred[:, 2], batch_label["bboxes_regression"][:, 2]) * batch_label["foreground"]/batch_size
-        batch_loss_h = loss_wh_function(batch_pred[:, 3], batch_label["bboxes_regression"][:, 3]) * batch_label["foreground"]/batch_size
-        
+
+        batch_loss_ltrb = torch.sum(0.1 * loss_ltrb_function(batch_pred[:, :4], batch_label["bboxes_regression"])/4., dim=1) * batch_label["foreground"]/batch_size
         batch_loss_class_heatmap = focal_loss(batch_pred[:, 4:], batch_label["classes_gaussian_heatmap"])/batch_size
         
-        batch_loss_offset_x = batch_loss_offset_x.flatten(1).sum(1)
-        batch_loss_offset_y = batch_loss_offset_y.flatten(1).sum(1)
-        batch_loss_w = batch_loss_w.flatten(1).sum(1)
-        batch_loss_h = batch_loss_h.flatten(1).sum(1)
+        batch_loss_ltrb = batch_loss_ltrb.flatten(1).sum(1)
         batch_loss_class_heatmap = batch_loss_class_heatmap.flatten(1).sum(1)
 
         batch_num_positive_samples = batch_label["foreground"].flatten(1).sum(1)
         batch_num_positive_samples = torch.maximum(batch_num_positive_samples, torch.ones_like(batch_num_positive_samples)) # to avoid zero divide
-        
-        batch_loss_offset_x /= batch_num_positive_samples
-        batch_loss_offset_y /= batch_num_positive_samples
-        batch_loss_w /= batch_num_positive_samples
-        batch_loss_h /= batch_num_positive_samples
+
+        batch_loss_ltrb /= batch_num_positive_samples
         batch_loss_class_heatmap /= batch_num_positive_samples
 
-        batch_loss_offset_xy = 0.1 * torch.sum(batch_loss_offset_x + batch_loss_offset_y)/2.
-        batch_loss_wh = 0.1 * torch.sum(batch_loss_w + batch_loss_h)/2.
+        batch_loss_ltrb = torch.sum(batch_loss_ltrb)
         batch_loss_class_heatmap = torch.sum(batch_loss_class_heatmap)
-        loss = batch_loss_offset_xy + batch_loss_wh + batch_loss_class_heatmap
-        return loss, [batch_loss_offset_xy, batch_loss_wh, batch_loss_class_heatmap]
+        loss = batch_loss_ltrb + batch_loss_class_heatmap
+        return loss, [batch_loss_ltrb, batch_loss_class_heatmap]
 
 # Gaussan Kernels for Training Class Heatmap, read Training-Time-Friendly Network for Real-Time Object Detection paper for more details
 def scatter_gaussian_kernel(heatmap, bbox_icx, bbox_icy, bbox_w, bbox_h, alpha=0.54):

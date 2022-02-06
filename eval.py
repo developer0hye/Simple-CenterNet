@@ -48,7 +48,7 @@ if __name__ == "__main__":
                                                   num_workers=opt.num_workers,
                                                   shuffle=False,
                                                   collate_fn=dataset.collate_fn,
-                                                  pin_memory=True,
+                                                  pin_memory=False,
                                                   drop_last=False)
         
     gt_bboxes_batch = []
